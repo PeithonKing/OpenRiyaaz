@@ -1,65 +1,27 @@
-const CACHE_NAME = "openriyaaz-v1";
-const APP_SHELL = [
-    "./",
-    "./index.html",
-    "./styles/style.css",
-    "./scripts/scripts.js",
-    "./manifest.json"
-];
+const CACHE_NAME = "openriyaaz-no-cache";
 
 self.addEventListener("install", (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-    );
+    // Force the waiting service worker to become the active service worker.
     self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+    // Clear all existing caches to ensure nothing is stored
     event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(
-                keys
-                    .filter((key) => key !== CACHE_NAME)
-                    .map((key) => caches.delete(key))
-            )
-        )
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.map((key) => {
+                    return caches.delete(key);
+                })
+            );
+        }).then(() => {
+            return self.clients.claim();
+        })
     );
-    self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-    const request = event.request;
-
-    if (request.method !== "GET") {
-        return;
-    }
-
-    const url = new URL(request.url);
-
-    if (request.mode === "navigate") {
-        event.respondWith(
-            fetch(request).catch(() => caches.match("./index.html"))
-        );
-        return;
-    }
-
-    if (url.origin !== self.location.origin) {
-        return;
-    }
-
-    event.respondWith(
-        caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            return fetch(request).then((networkResponse) => {
-                const responseClone = networkResponse.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(request, responseClone);
-                });
-                return networkResponse;
-            });
-        })
-    );
+    // A pure network-only strategy. 
+    // We must provide a fetch handler for the PWA to be considered "installable".
+    event.respondWith(fetch(event.request));
 });

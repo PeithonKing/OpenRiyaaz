@@ -5,7 +5,7 @@
     "beats": 6,
     "audioSrc": "./assets/tracks/dadra/daadra.webm",
     "bpm": 60,
-    "bols": ["dha", "dhin", "na", "na", "tin", "na"],
+    "bols": ["dha", "te", "te", "na", "dhin", "dhin"],
     "partition": [3, 3]
   },
   {

@@ -146,6 +146,54 @@ function toggleMasterPlaybackState() {
     icon.className = nextPlayingState ? "bi bi-pause-fill" : "bi bi-play-fill";
     icon.setAttribute("aria-hidden", "true");
   }
+
+  if (window.TablaModule && window.TablaModule.engine) {
+    if (nextPlayingState) {
+      window.TablaModule.engine.play();
+    } else {
+      window.TablaModule.engine.pause();
+    }
+  }
+}
+
+function updateUI() {
+  if (window.TablaModule && window.TablaModule.engine) {
+    var engine = window.TablaModule.engine;
+    var displayCount = document.querySelector(".display-count");
+    var displayBolsRow = document.querySelector(".display-bols-row");
+    var displayTempoValue = document.querySelector(".display-tempo strong");
+
+    if (engine.isPlaying && engine.currentTaal) {
+      var beat = engine.getCurrentBeat();
+      var bolIndex = beat - 1;
+
+      if (displayCount) {
+        displayCount.textContent = beat;
+      }
+
+      if (displayBolsRow) {
+        displayBolsRow.replaceChildren();
+        var bols = engine.currentTaal.bols;
+        var start = Math.max(0, bolIndex - 1);
+        var end = Math.min(bols.length, bolIndex + 2);
+
+        for (var i = start; i < end; i++) {
+          var span = document.createElement("span");
+          span.textContent = bols[i];
+          if (i === bolIndex) {
+            span.style.fontWeight = "bold";
+            span.style.color = "var(--color-primary)";
+          }
+          displayBolsRow.appendChild(span);
+        }
+      }
+    }
+
+    if (displayTempoValue && engine.targetBpm) {
+      displayTempoValue.textContent = engine.targetBpm;
+    }
+  }
+  requestAnimationFrame(updateUI);
 }
 
 function initializeMasterVolumeControl() {
@@ -174,6 +222,9 @@ function initializeMasterVolumeControl() {
     window.UIUtils.setStoredNumber(storageKeys.masterVolume, Number(masterVolumeSlider.value));
     if (masterVolumeValue instanceof HTMLElement) {
       masterVolumeValue.textContent = masterVolumeSlider.value;
+    }
+    if (window.TablaModule && window.TablaModule.engine) {
+      window.TablaModule.engine.updateVolume();
     }
   });
 
@@ -262,7 +313,9 @@ applyTheme(savedTheme);
 renderThemeToggle(savedTheme);
 syncThemeColor();
 initializeMasterVolumeControl();
-renderAccordions();
+renderAccordions().then(function () {
+  requestAnimationFrame(updateUI);
+});
 
 if (themeToggle instanceof HTMLButtonElement) {
   themeToggle.addEventListener("click", function () {

@@ -7,15 +7,164 @@ var tablaStorageKeys = {
 };
 var tablaRootScope = document;
 
-function Taal(config) {
-  this.id = config.id;
-  this.name = config.name;
-  this.beats = config.beats;
-  this.audioSrc = config.audioSrc;
-  this.bpm = config.bpm;
-  this.bols = Array.isArray(config.bols) ? config.bols.slice() : [];
-  this.partition = Array.isArray(config.partition) ? config.partition.slice() : [];
+class Taal {
+  constructor(config) {
+    this.id = config.id;
+    this.name = config.name;
+    this.beats = config.beats;
+    this.audioSrc = config.audioSrc;
+    this.originalBpm = config.bpm;
+    this.bols = Array.isArray(config.bols) ? config.bols.slice() : [];
+    this.partition = Array.isArray(config.partition) ? config.partition.slice() : [];
+  }
+
+  getCycleDuration(targetBpm) {
+    if (!targetBpm || targetBpm <= 0) return 0;
+    return (this.beats * 60) / targetBpm;
+  }
+
+  getPlaybackRate(targetBpm) {
+    if (!this.originalBpm || !targetBpm) return 1;
+    return targetBpm / this.originalBpm;
+  }
 }
+
+var TablaEngine = {
+  audio: new Audio(),
+  isPlaying: false,
+  currentTaal: null,
+  targetBpm: 120,
+  loopTimeout: null,
+  startTime: 0,
+
+  init: function() {
+    this.audio.preload = "auto";
+    this.audio.preservesPitch = true;
+    
+    this.audio.addEventListener("error", (e) => {
+      console.error("Audio error:", e);
+      this.stop();
+    });
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.setActionHandler("play", () => this.play());
+      navigator.mediaSession.setActionHandler("pause", () => this.pause());
+      navigator.mediaSession.setActionHandler("stop", () => this.stop());
+    }
+  },
+
+  setTaal: function(taalId) {
+    const taal = tablaTaals.find(t => t.id === taalId);
+    if (!taal) return;
+    
+    const wasPlaying = this.isPlaying;
+    this.stop();
+    
+    this.currentTaal = taal;
+    this.audio.src = taal.audioSrc;
+    this.audio.load();
+    
+    if (wasPlaying) this.play();
+    this.updateMediaMetadata();
+  },
+
+  setBpm: function(bpm) {
+    this.targetBpm = bpm;
+    if (this.isPlaying) {
+      // Re-calculate timing if playing
+      this.scheduleNextLoop();
+    }
+    this.updateMediaMetadata();
+  },
+
+  updateVolume: function() {
+    const masterVol = window.UIUtils.getStoredNumber("openriyaaz-master-volume", 82, 0, 100);
+    const tablaVol = window.UIUtils.getStoredNumber(tablaStorageKeys.tablaVolume, 82, 0, 100);
+    this.audio.volume = (masterVol / 100) * (tablaVol / 100);
+  },
+
+  play: function() {
+    if (!this.currentTaal) return;
+    this.isPlaying = true;
+    this.updateVolume();
+    this.startLoop();
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = "playing";
+    }
+  },
+
+  pause: function() {
+    this.isPlaying = false;
+    this.audio.pause();
+    if (this.loopTimeout) {
+      clearTimeout(this.loopTimeout);
+      this.loopTimeout = null;
+    }
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = "paused";
+    }
+  },
+
+  stop: function() {
+    this.pause();
+    this.audio.currentTime = 0;
+  },
+
+  startLoop: function() {
+    if (!this.isPlaying || !this.currentTaal) return;
+
+    const playbackRate = this.currentTaal.getPlaybackRate(this.targetBpm);
+    this.audio.playbackRate = playbackRate;
+    this.audio.currentTime = 0;
+    
+    this.startTime = performance.now();
+    
+    this.audio.play().catch(err => {
+      console.error("Playback failed:", err);
+      this.isPlaying = false;
+    });
+
+    this.scheduleNextLoop();
+  },
+
+  scheduleNextLoop: function() {
+    if (this.loopTimeout) clearTimeout(this.loopTimeout);
+    
+    const cycleDurationMs = this.currentTaal.getCycleDuration(this.targetBpm) * 1000;
+    const elapsed = performance.now() - this.startTime;
+    const remaining = Math.max(0, cycleDurationMs - elapsed);
+
+    this.loopTimeout = setTimeout(() => {
+      this.startLoop();
+    }, remaining);
+  },
+
+  updateMediaMetadata: function() {
+    if (!("mediaSession" in navigator) || !this.currentTaal) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: this.currentTaal.name,
+      artist: "OpenRiyaaz",
+      album: "Tabla Practice",
+      artwork: [
+        { src: "./assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "./assets/icons/icon-512.png", sizes: "512x512", type: "image/png" }
+      ]
+    });
+  },
+
+  getCurrentBeat: function() {
+    if (!this.isPlaying || !this.currentTaal) return 1;
+    
+    const cycleDuration = this.currentTaal.getCycleDuration(this.targetBpm);
+    const elapsedSeconds = (performance.now() - this.startTime) / 1000;
+    const progress = (elapsedSeconds % cycleDuration) / cycleDuration;
+    
+    return Math.floor(progress * this.currentTaal.beats) + 1;
+  }
+};
+
+TablaEngine.init();
 
 function validateTaalConfig(config) {
   if (!config || typeof config !== "object") {
@@ -138,11 +287,13 @@ function initializeTaalSelect(scope) {
 
     if (select.value) {
       localStorage.setItem(tablaStorageKeys.tablaTaalId, select.value);
+      TablaEngine.setTaal(select.value);
     }
 
     if (select.dataset.taalInitialized !== "true") {
       select.addEventListener("change", function () {
         localStorage.setItem(tablaStorageKeys.tablaTaalId, select.value);
+        TablaEngine.setTaal(select.value);
         updateTablaSummaryDescription();
       });
       select.dataset.taalInitialized = "true";
@@ -172,6 +323,7 @@ function initializeTablaVolumeControl(scope) {
     label.textContent = slider.value;
   }
   updateTablaSummaryDescription();
+  TablaEngine.updateVolume();
 
   if (slider.dataset.tablaVolumeInitialized === "true") {
     return;
@@ -184,6 +336,7 @@ function initializeTablaVolumeControl(scope) {
     }
     window.UIUtils.setStoredNumber(tablaStorageKeys.tablaVolume, Number(slider.value));
     updateTablaSummaryDescription();
+    TablaEngine.updateVolume();
   });
 
   slider.dataset.tablaVolumeInitialized = "true";
@@ -220,6 +373,7 @@ function setTablaBpmValue(controls, nextValue) {
   window.UIUtils.updateRangeFill(controls.slider);
   window.UIUtils.setStoredNumber(tablaStorageKeys.tablaBpm, clampedValue);
   updateTablaSummaryDescription();
+  TablaEngine.setBpm(clampedValue);
 }
 
 function initializeTablaBpmControls(scope) {
@@ -296,5 +450,7 @@ function getTaals() {
 window.TablaModule = {
   init: initTabla,
   loadTaals: loadTaals,
-  getTaals: getTaals
+  getTaals: getTaals,
+  engine: TablaEngine
 };
+
