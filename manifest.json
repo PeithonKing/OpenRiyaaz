@@ -1,7 +1,7 @@
 {
-  "name": "OpenRiyaz",
-  "short_name": "OpenRiyaz",
-  "description": "OpenRiyaz web app",
+  "name": "OpenRiyaaz",
+  "short_name": "OpenRiyaaz",
+  "description": "OpenRiyaaz web app",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -1,217 +1,338 @@
 var themeToggle = document.getElementById("theme-toggle");
 var root = document.documentElement;
 var mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+var pwaBanner = document.getElementById("pwa-banner");
+var pwaInstallButton = document.getElementById("pwa-install");
+var pwaHideButton = document.getElementById("pwa-hide");
+var masterPlayToggle = document.getElementById("master-play-toggle");
+var masterVolumeSlider = document.getElementById("master-volume");
+var masterVolumeValue = document.getElementById("master-volume-value");
+var storageKeys = {
+  masterVolume: "openriyaaz-master-volume"
+};
 var themeOrder = ["auto", "light", "dark"];
+var themeIcons = {
+  auto: "bi bi-display",
+  light: "bi bi-sun-fill",
+  dark: "bi bi-moon-stars-fill"
+};
+var themeLabels = {
+  auto: "System",
+  light: "Light",
+  dark: "Dark"
+};
 var lastScrollY = window.scrollY;
 var hideThreshold = 96;
 var accordionList = document.getElementById("accordion-list");
+var deferredInstallPrompt = null;
 var accordionItems = [
-    {
-        title: "First Item",
-        description: "This is the first accordion item.",
-        contentPath: "./content/content1.html"
-    },
-    {
-        title: "Second Item",
-        description: "A different description for the second one.",
-        contentPath: "./content/content2.html"
-    },
-    {
-        title: "Third Item",
-        description: "And the last one has its own description too.",
-        contentPath: "./content/content3.html"
-    }
+  {
+    title: "Tabla",
+    description: "",
+    contentPath: "./content/content1.html"
+  },
+  {
+    title: "Tanpura",
+    description: "",
+    contentPath: "./content/content2.html"
+  }
 ];
-var themeIcons = {
-    auto: "bi bi-display",
-    light: "bi bi-sun-fill",
-    dark: "bi bi-moon-stars-fill"
-};
-var themeLabels = {
-    auto: "System",
-    light: "Light",
-    dark: "Dark"
-};
 
 function applyTheme(theme) {
-    if (theme === "auto") {
-        root.removeAttribute("data-theme");
-        return;
-    }
+  if (theme === "auto") {
+    root.removeAttribute("data-theme");
+    return;
+  }
 
-    root.setAttribute("data-theme", theme);
+  root.setAttribute("data-theme", theme);
 }
 
 function getSavedTheme() {
-    return localStorage.getItem("theme") || "auto";
+  return localStorage.getItem("theme") || "auto";
 }
 
 function syncThemeColor() {
-    var metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (!metaThemeColor) {
-        return;
-    }
+  var metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  if (!metaThemeColor) {
+    return;
+  }
 
-    var isDark = root.getAttribute("data-theme") === "dark" ||
-        (!root.hasAttribute("data-theme") && mediaQuery.matches);
+  var isDark = root.getAttribute("data-theme") === "dark" ||
+    (!root.hasAttribute("data-theme") && mediaQuery.matches);
 
-    metaThemeColor.setAttribute("content", isDark ? "#13171f" : "#ffffff");
+  metaThemeColor.setAttribute("content", isDark ? "#13171f" : "#ffffff");
 }
 
 function handleThemeChange(theme) {
-    localStorage.setItem("theme", theme);
-    applyTheme(theme);
-    renderThemeToggle(theme);
-    syncThemeColor();
+  localStorage.setItem("theme", theme);
+  applyTheme(theme);
+  renderThemeToggle(theme);
+  syncThemeColor();
 }
 
 function renderThemeToggle(theme) {
-    if (!(themeToggle instanceof HTMLButtonElement)) {
-        return;
-    }
+  if (!(themeToggle instanceof HTMLButtonElement)) {
+    return;
+  }
 
-    var icon = themeToggle.querySelector("i");
-    var safeTheme = themeIcons[theme] ? theme : "auto";
-    var label = themeLabels[safeTheme];
+  var icon = themeToggle.querySelector("i");
+  var safeTheme = themeIcons[theme] ? theme : "auto";
+  var label = themeLabels[safeTheme];
 
-    themeToggle.setAttribute("data-theme-mode", safeTheme);
-    themeToggle.setAttribute("aria-label", "Theme: " + label);
-    themeToggle.setAttribute("title", "Theme: " + label);
+  themeToggle.setAttribute("data-theme-mode", safeTheme);
+  themeToggle.setAttribute("aria-label", "Theme: " + label);
+  themeToggle.setAttribute("title", "Theme: " + label);
 
-    if (icon) {
-        icon.className = themeIcons[safeTheme];
-        icon.setAttribute("aria-hidden", "true");
-    }
+  if (icon) {
+    icon.className = themeIcons[safeTheme];
+    icon.setAttribute("aria-hidden", "true");
+  }
 }
 
 function getNextTheme(theme) {
-    var currentIndex = themeOrder.indexOf(theme);
-    if (currentIndex === -1) {
-        return themeOrder[0];
-    }
+  var currentIndex = themeOrder.indexOf(theme);
+  if (currentIndex === -1) {
+    return themeOrder[0];
+  }
 
-    return themeOrder[(currentIndex + 1) % themeOrder.length];
+  return themeOrder[(currentIndex + 1) % themeOrder.length];
 }
 
 function syncThemeToggleVisibility() {
-    if (!(themeToggle instanceof HTMLButtonElement)) {
-        return;
-    }
+  if (!(themeToggle instanceof HTMLButtonElement)) {
+    return;
+  }
 
-    var currentScrollY = window.scrollY;
-    var shouldHide = currentScrollY > hideThreshold && currentScrollY > lastScrollY;
-    themeToggle.classList.toggle("is-hidden", shouldHide);
-    lastScrollY = currentScrollY;
+  var currentScrollY = window.scrollY;
+  var shouldHide = currentScrollY > hideThreshold && currentScrollY > lastScrollY;
+  themeToggle.classList.toggle("is-hidden", shouldHide);
+  lastScrollY = currentScrollY;
 }
 
-function createAccordionCard(item, htmlContent) {
-    var article = document.createElement("article");
-    article.className = "accordion-card";
+function isStandaloneMode() {
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+}
 
-    var details = document.createElement("details");
-    var summary = document.createElement("summary");
-    var summaryContent = document.createElement("div");
-    summaryContent.className = "summary-content";
+function showPwaBanner() {
+  if (!(pwaBanner instanceof HTMLElement) || isStandaloneMode()) {
+    return;
+  }
 
-    var toggle = document.createElement("input");
-    toggle.type = "checkbox";
-    toggle.setAttribute("role", "switch");
-    toggle.className = "accordion-switch";
-    toggle.setAttribute("aria-label", "Toggle Option");
-    toggle.addEventListener("click", function (event) {
-        event.stopPropagation();
-    });
+  pwaBanner.hidden = false;
+}
 
-    var headerText = document.createElement("div");
-    headerText.className = "accordion-header-text";
+function hidePwaBanner() {
+  if (!(pwaBanner instanceof HTMLElement)) {
+    return;
+  }
 
-    var title = document.createElement("strong");
-    title.textContent = item.title;
+  pwaBanner.hidden = true;
+}
 
-    var description = document.createElement("small");
-    description.className = "accordion-description";
-    description.textContent = item.description;
+function toggleMasterPlaybackState() {
+  if (!(masterPlayToggle instanceof HTMLButtonElement)) {
+    return;
+  }
 
-    var content = document.createElement("div");
-    content.className = "accordion-content";
-    content.innerHTML = htmlContent;
+  var isPlaying = masterPlayToggle.getAttribute("aria-pressed") === "true";
+  var nextPlayingState = !isPlaying;
+  var icon = masterPlayToggle.querySelector("i");
 
-    headerText.appendChild(title);
-    headerText.appendChild(description);
-    summaryContent.appendChild(toggle);
-    summaryContent.appendChild(headerText);
-    summary.appendChild(summaryContent);
-    details.appendChild(summary);
-    details.appendChild(content);
-    article.appendChild(details);
+  masterPlayToggle.setAttribute("aria-pressed", String(nextPlayingState));
+  masterPlayToggle.setAttribute("aria-label", nextPlayingState ? "Pause" : "Play");
 
-    return article;
+  if (icon) {
+    icon.className = nextPlayingState ? "bi bi-pause-fill" : "bi bi-play-fill";
+    icon.setAttribute("aria-hidden", "true");
+  }
+}
+
+function initializeMasterVolumeControl() {
+  if (!(masterVolumeSlider instanceof HTMLInputElement)) {
+    return;
+  }
+
+  var min = Number(masterVolumeSlider.min || 0);
+  var max = Number(masterVolumeSlider.max || 100);
+  var fallbackValue = Number(masterVolumeSlider.value || min);
+  var savedValue = window.UIUtils.getStoredNumber(storageKeys.masterVolume, fallbackValue, min, max);
+
+  masterVolumeSlider.value = String(savedValue);
+  window.UIUtils.updateRangeFill(masterVolumeSlider);
+
+  if (masterVolumeValue instanceof HTMLElement) {
+    masterVolumeValue.textContent = masterVolumeSlider.value;
+  }
+
+  if (masterVolumeSlider.dataset.masterVolumeInitialized === "true") {
+    return;
+  }
+
+  masterVolumeSlider.addEventListener("input", function () {
+    window.UIUtils.updateRangeFill(masterVolumeSlider);
+    window.UIUtils.setStoredNumber(storageKeys.masterVolume, Number(masterVolumeSlider.value));
+    if (masterVolumeValue instanceof HTMLElement) {
+      masterVolumeValue.textContent = masterVolumeSlider.value;
+    }
+  });
+
+  masterVolumeSlider.dataset.masterVolumeInitialized = "true";
+}
+
+function createAccordionCard(item, htmlContent, index) {
+  var article = document.createElement("article");
+  article.className = "accordion-card";
+
+  var details = document.createElement("details");
+  details.open = index === 0;
+  var summary = document.createElement("summary");
+  var summaryContent = document.createElement("div");
+  summaryContent.className = "summary-content";
+
+  var toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  toggle.setAttribute("role", "switch");
+  toggle.className = "accordion-switch";
+  toggle.setAttribute("aria-label", "Toggle Option");
+  toggle.addEventListener("click", function (event) {
+    event.stopPropagation();
+  });
+
+  var headerText = document.createElement("div");
+  headerText.className = "accordion-header-text";
+
+  var title = document.createElement("strong");
+  title.textContent = item.title;
+
+  var description = document.createElement("small");
+  description.className = "accordion-description";
+  description.textContent = item.description;
+
+  var content = document.createElement("div");
+  content.className = "accordion-content";
+  content.innerHTML = htmlContent;
+
+  headerText.appendChild(title);
+  headerText.appendChild(description);
+  summaryContent.appendChild(toggle);
+  summaryContent.appendChild(headerText);
+  summary.appendChild(summaryContent);
+  details.appendChild(summary);
+  details.appendChild(content);
+  article.appendChild(details);
+
+  return article;
 }
 
 function fetchAccordionContent(item) {
-    return fetch(item.contentPath)
-        .then(function (response) {
-            if (!response.ok) {
-                throw new Error("Failed to load " + item.contentPath);
-            }
-
-            return response.text();
-        })
-        .then(function (htmlContent) {
-            return createAccordionCard(item, htmlContent);
-        })
-        .catch(function () {
-            return createAccordionCard(item, "<p>Content not found.</p>");
-        });
+  return fetch(item.contentPath)
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error("Failed to load " + item.contentPath);
+      }
+      return response.text();
+    })
+    .catch(function () {
+      return "<p>Content not found.</p>";
+    });
 }
 
 function renderAccordions() {
-    if (!(accordionList instanceof HTMLElement)) {
-        return Promise.resolve();
-    }
+  if (!(accordionList instanceof HTMLElement)) {
+    return Promise.resolve();
+  }
 
-    accordionList.replaceChildren();
+  accordionList.replaceChildren();
 
-    return Promise.all(accordionItems.map(fetchAccordionContent)).then(function (cards) {
-        cards.forEach(function (card) {
-            accordionList.appendChild(card);
-        });
+  return Promise.all(accordionItems.map(fetchAccordionContent)).then(function (contents) {
+    contents.forEach(function (htmlContent, index) {
+      var card = createAccordionCard(accordionItems[index], htmlContent, index);
+      accordionList.appendChild(card);
     });
+
+    if (window.TablaModule && typeof window.TablaModule.init === "function") {
+      window.TablaModule.init(accordionList);
+    }
+  });
 }
 
 var savedTheme = getSavedTheme();
 applyTheme(savedTheme);
 renderThemeToggle(savedTheme);
 syncThemeColor();
+initializeMasterVolumeControl();
 renderAccordions();
 
 if (themeToggle instanceof HTMLButtonElement) {
-    themeToggle.addEventListener("click", function () {
-        handleThemeChange(getNextTheme(getSavedTheme()));
-    });
+  themeToggle.addEventListener("click", function () {
+    handleThemeChange(getNextTheme(getSavedTheme()));
+  });
+}
+
+if (masterPlayToggle instanceof HTMLButtonElement) {
+  masterPlayToggle.addEventListener("click", toggleMasterPlaybackState);
 }
 
 window.addEventListener("scroll", syncThemeToggleVisibility, { passive: true });
 syncThemeToggleVisibility();
 
 if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-        navigator.serviceWorker.register("./sw.js").catch(function (error) {
-            console.error("Service worker registration failed:", error);
-        });
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js").catch(function (error) {
+      console.error("Service worker registration failed:", error);
     });
+  });
+}
+
+if (!isStandaloneMode()) {
+  showPwaBanner();
+}
+
+window.addEventListener("beforeinstallprompt", function (event) {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  showPwaBanner();
+});
+
+window.addEventListener("appinstalled", function () {
+  deferredInstallPrompt = null;
+  hidePwaBanner();
+});
+
+if (pwaInstallButton instanceof HTMLButtonElement) {
+  pwaInstallButton.addEventListener("click", function () {
+    if (!deferredInstallPrompt) {
+      window.alert("App can't be installed seamlessly right now. Your browser might require you to use 'Add to Home Screen' from the menu.");
+      return;
+    }
+
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(function (choice) {
+      if (choice.outcome === "accepted") {
+        hidePwaBanner();
+      }
+      deferredInstallPrompt = null;
+    });
+  });
+}
+
+if (pwaHideButton instanceof HTMLButtonElement) {
+  pwaHideButton.addEventListener("click", function () {
+    hidePwaBanner();
+  });
 }
 
 if (typeof mediaQuery.addEventListener === "function") {
-    mediaQuery.addEventListener("change", function () {
-        if (getSavedTheme() === "auto") {
-            syncThemeColor();
-        }
-    });
+  mediaQuery.addEventListener("change", function () {
+    if (getSavedTheme() === "auto") {
+      syncThemeColor();
+    }
+  });
 } else if (typeof mediaQuery.addListener === "function") {
-    mediaQuery.addListener(function () {
-        if (getSavedTheme() === "auto") {
-            syncThemeColor();
-        }
-    });
+  mediaQuery.addListener(function () {
+    if (getSavedTheme() === "auto") {
+      syncThemeColor();
+    }
+  });
 }

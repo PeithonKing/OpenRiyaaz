@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dadra",
+    "name": "Dadra",
+    "beats": 6,
+    "audioSrc": "./assets/tracks/dadra/daadra.webm",
+    "bpm": 60,
+    "bols": ["dha", "dhin", "na", "na", "tin", "na"],
+    "partition": [3, 3]
+  },
+  {
+    "id": "dhamar",
+    "name": "Dhamar",
+    "beats": 14,
+    "audioSrc": "./assets/tracks/dhamar/Dhamar55bpm.mp4",
+    "bpm": 60,
+    "bols": ["Ka", "dhi", "ta", "dhi", "ta", "dha", "aa", "ga", "di", "na", "ti", "ta", "taa", "aa"],
+    "partition": [5, 2, 3, 4]
+  }
+]

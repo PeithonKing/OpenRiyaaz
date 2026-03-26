@@ -2,44 +2,83 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="OpenRiyaz" />
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="manifest" href="./manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="./assets/icons/logo.svg" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="OpenRiyaz" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <title>OpenRiyaz</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="./styles/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="OpenRiyaaz" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./assets/icons/logo.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="OpenRiyaaz" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>OpenRiyaaz</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="./styles/style.css" />
 </head>
 
 <body>
-    <button id="theme-toggle" class="theme-toggle theme-toggle-floating" type="button" aria-label="Theme: System"
-        title="Theme: System" data-theme-mode="auto">
-        <i class="bi bi-display" aria-hidden="true"></i>
-    </button>
+  <div id="pwa-banner" class="pwa-banner" hidden>
+    <button id="pwa-install" class="pwa-install" type="button">Install</button>
+    <span>This website can be installed and used as an app.</span>
+    <button id="pwa-hide" class="pwa-hide" type="button">Hide</button>
+  </div>
 
-    <header class="container site-header">
-        <nav class="site-nav" aria-label="Main navigation">
-            <ul class="nav-list brand-list">
-                <li>
-                    <h1 class="site-title"><strong>OpenRiyaz</strong></h1>
-                </li>
-            </ul>
-        </nav>
-    </header>
+  <button id="theme-toggle" class="theme-toggle theme-toggle-floating" type="button" aria-label="Theme: System"
+    title="Theme: System" data-theme-mode="auto">
+    <i class="bi bi-display" aria-hidden="true"></i>
+  </button>
+
+  <header class="container site-header">
+    <nav class="site-nav" aria-label="Main navigation">
+      <ul class="nav-list brand-list">
+        <li>
+          <h1 class="site-title"><strong>OpenRiyaaz</strong></h1>
+        </li>
+      </ul>
+    </nav>
+  </header>
 
   <main class="container main-content">
-    <h2 class="page-title">Welcome to OpenRiyaz</h2>
+    <section class="practice-console" aria-label="Playback console">
+      <div class="practice-display" aria-label="Current playback display">
+        <div class="display-count">4</div>
+        <div class="display-bols-row">
+          <span>Na</span>
+          <span>DhaGe</span>
+          <span>Tin</span>
+        </div>
+        <div class="display-meta-row">
+          <div class="display-tempo">
+            <strong>200</strong>
+            <span>bpm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="master-controls" aria-label="Master controls">
+        <button id="master-play-toggle" class="master-play-button" type="button" aria-label="Play or pause"
+          aria-pressed="false">
+          <i class="bi bi-play-fill" aria-hidden="true"></i>
+        </button>
+
+        <div class="master-volume-group">
+          <div class="master-volume-head">
+            <label for="master-volume">Master volume</label>
+            <span id="master-volume-value">82</span>
+          </div>
+          <input id="master-volume" class="master-volume-slider" type="range" min="0" max="100" value="82" />
+        </div>
+      </div>
+    </section>
+
     <section id="accordion-list" aria-label="Practice sections"></section>
   </main>
 
-    <script src="./scripts/scripts.js"></script>
+  <script src="./scripts/ui-utils.js"></script>
+  <script src="./scripts/tabla.js"></script>
+  <script src="./scripts/scripts.js"></script>
 </body>
 
 </html>
