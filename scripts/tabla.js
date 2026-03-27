@@ -290,7 +290,7 @@ function initializeTaalSelect(scope) {
     taals.forEach(function (taal, index) {
       var option = document.createElement("option");
       option.value = taal.id;
-      option.textContent = taal.name;
+      option.textContent = taal.name + " (" + formatPartitionedBols(taal.bols, taal.partition) + ")";
       if (storedTaalId && taal.id === storedTaalId) {
         option.selected = true;
       } else if (!storedTaalId && index === 0) {
@@ -326,6 +326,47 @@ function initializeTaalSelect(scope) {
 
     updateTablaSummaryDescription();
   });
+}
+
+function formatPartitionedBols(bols, partition) {
+  if (!Array.isArray(bols) || bols.length === 0) {
+    return "";
+  }
+
+  if (!Array.isArray(partition) || partition.length === 0) {
+    return bols.join("-");
+  }
+
+  var normalizedPartition = partition.map(function (part) {
+    return Number(part);
+  });
+
+  var isValidPartition = normalizedPartition.every(function (part) {
+    return Number.isFinite(part) && part > 0;
+  });
+
+  if (!isValidPartition) {
+    return bols.join("-");
+  }
+
+  var partitionSum = normalizedPartition.reduce(function (sum, part) {
+    return sum + part;
+  }, 0);
+
+  if (partitionSum !== bols.length) {
+    return bols.join("-");
+  }
+
+  var groups = [];
+  var cursor = 0;
+
+  normalizedPartition.forEach(function (size) {
+    var nextCursor = cursor + size;
+    groups.push(bols.slice(cursor, nextCursor).join("-"));
+    cursor = nextCursor;
+  });
+
+  return groups.join("/");
 }
 
 function initializeTablaVolumeControl(scope) {
