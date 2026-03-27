@@ -262,9 +262,12 @@ function updateTablaSummaryDescription() {
 
   var taalName = "Tabla";
   if (taalSelect instanceof HTMLSelectElement) {
-    var selectedOption = taalSelect.options[taalSelect.selectedIndex];
-    if (selectedOption && selectedOption.textContent) {
-      taalName = selectedOption.textContent.trim();
+    var selectedTaalId = taalSelect.value;
+    var selectedTaal = tablaTaals.find(function (taal) {
+      return taal.id === selectedTaalId;
+    });
+    if (selectedTaal && selectedTaal.name) {
+      taalName = selectedTaal.name;
     }
   }
 
@@ -464,14 +467,26 @@ function initializeTablaBpmControls(scope) {
   });
 
   controls.input.addEventListener("input", function () {
-    var typedValue = Number(controls.input.value);
-    if (Number.isFinite(typedValue)) {
-      setTablaBpmValue(controls, typedValue);
-    }
+    updateTablaSummaryDescription();
   });
 
-  controls.input.addEventListener("blur", function () {
-    setTablaBpmValue(controls, Number(controls.input.value || controls.slider.value));
+  function commitBpmInputValue() {
+    var rawValue = controls.input.value.trim();
+    var parsedValue = Number(rawValue);
+    if (!Number.isFinite(parsedValue)) {
+      parsedValue = Number(controls.slider.value);
+    }
+    setTablaBpmValue(controls, parsedValue);
+  }
+
+  controls.input.addEventListener("blur", commitBpmInputValue);
+
+  controls.input.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitBpmInputValue();
+      controls.input.blur();
+    }
   });
 
   controls.buttons.forEach(function (button) {
