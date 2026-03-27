@@ -33,7 +33,7 @@ var TablaEngine = {
   audio: new Audio(),
   isPlaying: false,
   currentTaal: null,
-  targetBpm: 120,
+  targetBpm: 60,
   loopTimeout: null,
   startTime: 0,
 
@@ -69,17 +69,42 @@ var TablaEngine = {
   },
 
   setBpm: function(bpm) {
-    this.targetBpm = bpm;
-    if (this.isPlaying) {
-      // Re-calculate timing if playing
-      this.scheduleNextLoop();
+    var nextBpm = Number(bpm);
+    if (!Number.isFinite(nextBpm) || nextBpm <= 0) {
+      return;
     }
+
+    if (this.isPlaying && this.currentTaal) {
+      var now = performance.now();
+      var previousCycleDuration = this.currentTaal.getCycleDuration(this.targetBpm);
+      var cycleProgress = 0;
+
+      if (previousCycleDuration > 0) {
+        var elapsedSeconds = (now - this.startTime) / 1000;
+        cycleProgress = (elapsedSeconds % previousCycleDuration) / previousCycleDuration;
+      }
+
+      this.targetBpm = nextBpm;
+
+      var nextCycleDuration = this.currentTaal.getCycleDuration(this.targetBpm);
+      if (nextCycleDuration > 0) {
+        this.startTime = now - (cycleProgress * nextCycleDuration * 1000);
+      } else {
+        this.startTime = now;
+      }
+
+      this.audio.playbackRate = this.currentTaal.getPlaybackRate(this.targetBpm);
+      this.scheduleNextLoop();
+    } else {
+      this.targetBpm = nextBpm;
+    }
+
     this.updateMediaMetadata();
   },
 
   updateVolume: function() {
-    const masterVol = window.UIUtils.getStoredNumber("openriyaaz-master-volume", 82, 0, 100);
-    const tablaVol = window.UIUtils.getStoredNumber(tablaStorageKeys.tablaVolume, 82, 0, 100);
+    const masterVol = window.UIUtils.getStoredNumber("openriyaaz-master-volume", 100, 0, 100);
+    const tablaVol = window.UIUtils.getStoredNumber(tablaStorageKeys.tablaVolume, 100, 0, 100);
     this.audio.volume = (masterVol / 100) * (tablaVol / 100);
   },
 
@@ -453,4 +478,3 @@ window.TablaModule = {
   getTaals: getTaals,
   engine: TablaEngine
 };
-

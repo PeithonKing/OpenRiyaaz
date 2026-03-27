@@ -136,22 +136,37 @@ function toggleMasterPlaybackState() {
   }
 
   var isPlaying = masterPlayToggle.getAttribute("aria-pressed") === "true";
-  var nextPlayingState = !isPlaying;
   var icon = masterPlayToggle.querySelector("i");
 
-  masterPlayToggle.setAttribute("aria-pressed", String(nextPlayingState));
-  masterPlayToggle.setAttribute("aria-label", nextPlayingState ? "Pause" : "Play");
-
-  if (icon) {
-    icon.className = nextPlayingState ? "bi bi-pause-fill" : "bi bi-play-fill";
-    icon.setAttribute("aria-hidden", "true");
-  }
-
   if (window.TablaModule && window.TablaModule.engine) {
-    if (nextPlayingState) {
+    if (!isPlaying) {
+      var hasEnabledTrack = document.querySelectorAll(".accordion-switch:checked").length > 0;
+      if (!hasEnabledTrack) {
+        window.alert("Turn on at least one instrument to start playback.");
+        masterPlayToggle.setAttribute("aria-pressed", "false");
+        masterPlayToggle.setAttribute("aria-label", "Play");
+        if (icon) {
+          icon.className = "bi bi-play-fill";
+          icon.setAttribute("aria-hidden", "true");
+        }
+        return;
+      }
+
       window.TablaModule.engine.play();
+      masterPlayToggle.setAttribute("aria-pressed", "true");
+      masterPlayToggle.setAttribute("aria-label", "Stop");
+      if (icon) {
+        icon.className = "bi bi-stop-fill";
+        icon.setAttribute("aria-hidden", "true");
+      }
     } else {
-      window.TablaModule.engine.pause();
+      window.TablaModule.engine.stop();
+      masterPlayToggle.setAttribute("aria-pressed", "false");
+      masterPlayToggle.setAttribute("aria-label", "Play");
+      if (icon) {
+        icon.className = "bi bi-play-fill";
+        icon.setAttribute("aria-hidden", "true");
+      }
     }
   }
 }
@@ -165,7 +180,7 @@ function updateUI() {
 
     if (engine.isPlaying && engine.currentTaal) {
       var beat = engine.getCurrentBeat();
-      var bolIndex = beat - 1;
+      var i = beat;
 
       if (displayCount) {
         displayCount.textContent = beat;
@@ -174,18 +189,38 @@ function updateUI() {
       if (displayBolsRow) {
         displayBolsRow.replaceChildren();
         var bols = engine.currentTaal.bols;
-        var start = Math.max(0, bolIndex - 1);
-        var end = Math.min(bols.length, bolIndex + 2);
+        var total = bols.length;
+        var leftIndex = (i - 2 + total) % total;
+        var centerIndex = (i - 1 + total) % total;
+        var rightIndex = i % total;
+        var indexes = [leftIndex, centerIndex, rightIndex];
 
-        for (var i = start; i < end; i++) {
+        indexes.forEach(function (index, position) {
           var span = document.createElement("span");
-          span.textContent = bols[i];
-          if (i === bolIndex) {
+          span.textContent = bols[index];
+          if (position === 1) {
             span.style.fontWeight = "bold";
-            span.style.color = "var(--color-primary)";
+            span.style.color = "var(--h2-color)";
           }
           displayBolsRow.appendChild(span);
-        }
+        });
+      }
+    } else {
+      if (displayCount) {
+        displayCount.textContent = "0";
+      }
+
+      if (displayBolsRow) {
+        displayBolsRow.replaceChildren();
+        ["prev", "bol", "next"].forEach(function (text, position) {
+          var span = document.createElement("span");
+          span.textContent = text;
+          if (position === 1) {
+            span.style.fontWeight = "bold";
+            span.style.color = "var(--h2-color)";
+          }
+          displayBolsRow.appendChild(span);
+        });
       }
     }
 
@@ -246,6 +281,7 @@ function createAccordionCard(item, htmlContent, index) {
   toggle.setAttribute("role", "switch");
   toggle.className = "accordion-switch";
   toggle.setAttribute("aria-label", "Toggle Option");
+  toggle.checked = index === 0;
   toggle.addEventListener("click", function (event) {
     event.stopPropagation();
   });

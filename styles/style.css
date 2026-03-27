@@ -394,9 +394,28 @@ small {
 }
 
 .display-bols-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
   margin-top: -0.15rem;
   color: var(--color);
   font-size: 0.95rem;
+}
+
+.display-bols-row span:first-child {
+  justify-self: start;
+  text-align: left;
+}
+
+.display-bols-row span:nth-child(2) {
+  justify-self: center;
+  text-align: center;
+}
+
+.display-bols-row span:last-child {
+  justify-self: end;
+  text-align: right;
 }
 
 .display-bols-row span:nth-child(2) {
