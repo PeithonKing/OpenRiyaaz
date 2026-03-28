@@ -13,7 +13,7 @@
     "name": "Dhamar",
     "beats": 14,
     "audioSrc": "./assets/tracks/dhamar/Dhamar55bpm.mp4",
-    "bpm": 60,
+    "bpm": 55,
     "bols": ["Ka", "dhi", "ta", "dhi", "ta", "dha", "aa", "ga", "di", "na", "ti", "ta", "taa", "aa"],
     "partition": [5, 2, 3, 4]
   }
