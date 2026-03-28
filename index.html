@@ -25,6 +25,17 @@
     <button id="pwa-hide" class="pwa-hide" type="button">Hide</button>
   </div>
 
+  <div id="enable-track-prompt" class="confirm-overlay" hidden>
+    <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="enable-track-title">
+      <h3 id="enable-track-title">No instrument is enabled</h3>
+      <p>Enable Tabla and start playback now?</p>
+      <div class="confirm-actions">
+        <button id="enable-tabla-yes" class="confirm-primary" type="button">Yes, enable tabla</button>
+        <button id="enable-tabla-no" class="confirm-secondary" type="button">No, do nothing</button>
+      </div>
+    </div>
+  </div>
+
   <button id="theme-toggle" class="theme-toggle theme-toggle-floating" type="button" aria-label="Theme: System"
     title="Theme: System" data-theme-mode="auto">
     <i class="bi bi-display" aria-hidden="true"></i>

@@ -105,7 +105,10 @@ var TablaEngine = {
   updateVolume: function() {
     const masterVol = window.UIUtils.getStoredNumber("openriyaaz-master-volume", 100, 0, 100);
     const tablaVol = window.UIUtils.getStoredNumber(tablaStorageKeys.tablaVolume, 100, 0, 100);
-    this.audio.volume = (masterVol / 100) * (tablaVol / 100);
+    var tablaToggle = document.querySelector('.accordion-switch[data-instrument-id="tabla"]');
+    var isTablaEnabled = !(tablaToggle instanceof HTMLInputElement) || tablaToggle.checked;
+    var enabledFactor = isTablaEnabled ? 1 : 0;
+    this.audio.volume = (masterVol / 100) * (tablaVol / 100) * enabledFactor;
   },
 
   play: function() {
@@ -411,6 +414,19 @@ function initializeTablaVolumeControl(scope) {
   slider.dataset.tablaVolumeInitialized = "true";
 }
 
+function syncTablaVolumeControlState(scope) {
+  var rootScope = scope instanceof HTMLElement ? scope : tablaRootScope;
+  var slider = rootScope.querySelector("#tabla-volume");
+  var tablaToggle = document.querySelector('.accordion-switch[data-instrument-id="tabla"]');
+
+  if (!(slider instanceof HTMLInputElement)) {
+    return;
+  }
+
+  var isTablaEnabled = !(tablaToggle instanceof HTMLInputElement) || tablaToggle.checked;
+  slider.disabled = !isTablaEnabled;
+}
+
 function getTablaBpmElements(scope) {
   var rootScope = scope instanceof HTMLElement ? scope : document;
   var slider = rootScope.querySelector("#tabla-bpm");
@@ -521,6 +537,7 @@ function initTabla(scope) {
   initializeTaalSelect(scope);
   initializeTablaVolumeControl(scope);
   initializeTablaBpmControls(scope);
+  syncTablaVolumeControlState(scope);
   updateTablaSummaryDescription();
 }
 
@@ -532,5 +549,6 @@ window.TablaModule = {
   init: initTabla,
   loadTaals: loadTaals,
   getTaals: getTaals,
-  engine: TablaEngine
+  engine: TablaEngine,
+  syncTablaVolumeControlState: syncTablaVolumeControlState
 };

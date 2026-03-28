@@ -195,6 +195,71 @@ main {
   opacity: 1;
 }
 
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(7, 10, 16, 0.55);
+}
+
+.confirm-overlay[hidden] {
+  display: none;
+}
+
+.confirm-dialog {
+  width: min(100%, 26rem);
+  border: var(--border-width) solid var(--form-element-border-color);
+  border-radius: calc(var(--border-radius) + 0.15rem);
+  background: var(--card-background-color);
+  color: var(--color);
+  box-shadow: var(--box-shadow);
+  padding: 1rem;
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: var(--h1-color);
+}
+
+.confirm-dialog p {
+  margin: 0 0 0.85rem;
+  color: var(--muted-color);
+  font-size: 0.95rem;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.55rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.confirm-actions button {
+  margin: 0;
+  border: var(--border-width) solid var(--form-element-border-color);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.confirm-primary {
+  background: var(--h1-color);
+  border-color: var(--h1-color);
+  color: var(--background-color);
+}
+
+.confirm-secondary {
+  background: var(--form-element-background-color);
+  color: var(--color);
+}
+
 h1,
 h2,
 p {
@@ -765,6 +830,33 @@ small {
   background: var(--h2-color);
   box-shadow: 0 0 0 1px var(--muted-border-color);
   cursor: pointer;
+}
+
+.instrument-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--muted-border-color) 75%, transparent) 0%,
+    color-mix(in srgb, var(--muted-border-color) 75%, transparent) 100%
+  );
+}
+
+.instrument-slider:disabled::-webkit-slider-thumb {
+  background: var(--muted-color);
+  border-color: color-mix(in srgb, var(--background-color) 85%, var(--muted-color) 15%);
+  cursor: not-allowed;
+}
+
+.instrument-slider:disabled::-moz-range-thumb {
+  background: var(--muted-color);
+  border-color: color-mix(in srgb, var(--background-color) 85%, var(--muted-color) 15%);
+  cursor: not-allowed;
+}
+
+.instrument-slider:disabled::-moz-range-progress,
+.instrument-slider:disabled::-moz-range-track {
+  background: color-mix(in srgb, var(--muted-border-color) 75%, transparent);
 }
 
 .bpm-stepper {

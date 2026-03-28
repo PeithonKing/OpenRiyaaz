@@ -7,6 +7,9 @@ var pwaHideButton = document.getElementById("pwa-hide");
 var masterPlayToggle = document.getElementById("master-play-toggle");
 var masterVolumeSlider = document.getElementById("master-volume");
 var masterVolumeValue = document.getElementById("master-volume-value");
+var enableTrackPrompt = document.getElementById("enable-track-prompt");
+var enableTablaYesButton = document.getElementById("enable-tabla-yes");
+var enableTablaNoButton = document.getElementById("enable-tabla-no");
 var storageKeys = {
   masterVolume: "openriyaaz-master-volume"
 };
@@ -27,16 +30,84 @@ var accordionList = document.getElementById("accordion-list");
 var deferredInstallPrompt = null;
 var accordionItems = [
   {
+    id: "tabla",
     title: "Tabla",
     description: "",
     contentPath: "./content/content1.html"
   },
   {
+    id: "tanpura",
     title: "Tanpura",
     description: "",
     contentPath: "./content/content2.html"
   }
 ];
+
+function hasAnyEnabledTrack() {
+  return document.querySelectorAll(".accordion-switch:checked").length > 0;
+}
+
+function setMasterPlayButtonState(isPlaying) {
+  if (!(masterPlayToggle instanceof HTMLButtonElement)) {
+    return;
+  }
+
+  var icon = masterPlayToggle.querySelector("i");
+  masterPlayToggle.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+  masterPlayToggle.setAttribute("aria-label", isPlaying ? "Stop" : "Play");
+  if (icon) {
+    icon.className = isPlaying ? "bi bi-stop-fill" : "bi bi-play-fill";
+    icon.setAttribute("aria-hidden", "true");
+  }
+}
+
+function getTablaToggle() {
+  return document.querySelector('.accordion-switch[data-instrument-id="tabla"]');
+}
+
+function ensureTablaEnabled() {
+  var tablaToggle = getTablaToggle();
+  if (!(tablaToggle instanceof HTMLInputElement)) {
+    return false;
+  }
+
+  if (!tablaToggle.checked) {
+    tablaToggle.checked = true;
+    tablaToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  return true;
+}
+
+function promptEnableTablaForPlayback() {
+  return new Promise(function (resolve) {
+    if (!(enableTrackPrompt instanceof HTMLElement) ||
+      !(enableTablaYesButton instanceof HTMLButtonElement) ||
+      !(enableTablaNoButton instanceof HTMLButtonElement)) {
+      resolve(false);
+      return;
+    }
+
+    enableTrackPrompt.hidden = false;
+
+    function cleanup(result) {
+      enableTrackPrompt.hidden = true;
+      enableTablaYesButton.removeEventListener("click", onYes);
+      enableTablaNoButton.removeEventListener("click", onNo);
+      resolve(result);
+    }
+
+    function onYes() {
+      cleanup(true);
+    }
+
+    function onNo() {
+      cleanup(false);
+    }
+
+    enableTablaYesButton.addEventListener("click", onYes, { once: true });
+    enableTablaNoButton.addEventListener("click", onNo, { once: true });
+  });
+}
 
 function applyTheme(theme) {
   if (theme === "auto") {
@@ -130,43 +201,31 @@ function hidePwaBanner() {
   pwaBanner.hidden = true;
 }
 
-function toggleMasterPlaybackState() {
+async function toggleMasterPlaybackState() {
   if (!(masterPlayToggle instanceof HTMLButtonElement)) {
     return;
   }
 
   var isPlaying = masterPlayToggle.getAttribute("aria-pressed") === "true";
-  var icon = masterPlayToggle.querySelector("i");
 
   if (window.TablaModule && window.TablaModule.engine) {
     if (!isPlaying) {
-      var hasEnabledTrack = document.querySelectorAll(".accordion-switch:checked").length > 0;
-      if (!hasEnabledTrack) {
-        window.alert("Turn on at least one instrument to start playback.");
-        masterPlayToggle.setAttribute("aria-pressed", "false");
-        masterPlayToggle.setAttribute("aria-label", "Play");
-        if (icon) {
-          icon.className = "bi bi-play-fill";
-          icon.setAttribute("aria-hidden", "true");
+      if (!hasAnyEnabledTrack()) {
+        var shouldEnableTabla = await promptEnableTablaForPlayback();
+        if (shouldEnableTabla) {
+          ensureTablaEnabled();
         }
-        return;
+        if (!hasAnyEnabledTrack()) {
+          setMasterPlayButtonState(false);
+          return;
+        }
       }
 
       window.TablaModule.engine.play();
-      masterPlayToggle.setAttribute("aria-pressed", "true");
-      masterPlayToggle.setAttribute("aria-label", "Stop");
-      if (icon) {
-        icon.className = "bi bi-stop-fill";
-        icon.setAttribute("aria-hidden", "true");
-      }
+      setMasterPlayButtonState(true);
     } else {
       window.TablaModule.engine.stop();
-      masterPlayToggle.setAttribute("aria-pressed", "false");
-      masterPlayToggle.setAttribute("aria-label", "Play");
-      if (icon) {
-        icon.className = "bi bi-play-fill";
-        icon.setAttribute("aria-hidden", "true");
-      }
+      setMasterPlayButtonState(false);
     }
   }
 }
@@ -177,8 +236,10 @@ function updateUI() {
     var displayCount = document.querySelector(".display-count");
     var displayBolsRow = document.querySelector(".display-bols-row");
     var displayTempoValue = document.querySelector(".display-tempo strong");
+    var tablaToggle = getTablaToggle();
+    var isTablaEnabled = !(tablaToggle instanceof HTMLInputElement) || tablaToggle.checked;
 
-    if (engine.isPlaying && engine.currentTaal) {
+    if (engine.isPlaying && engine.currentTaal && isTablaEnabled) {
       var beat = engine.getCurrentBeat();
       var i = beat;
 
@@ -281,9 +342,22 @@ function createAccordionCard(item, htmlContent, index) {
   toggle.setAttribute("role", "switch");
   toggle.className = "accordion-switch";
   toggle.setAttribute("aria-label", "Toggle Option");
+  toggle.dataset.instrumentId = item.id || "";
   toggle.checked = index === 0;
   toggle.addEventListener("click", function (event) {
     event.stopPropagation();
+  });
+  toggle.addEventListener("change", function () {
+    if (!hasAnyEnabledTrack() && window.TablaModule && window.TablaModule.engine) {
+      window.TablaModule.engine.stop();
+      setMasterPlayButtonState(false);
+    } else if (window.TablaModule && window.TablaModule.engine) {
+      window.TablaModule.engine.updateVolume();
+    }
+
+    if (window.TablaModule && typeof window.TablaModule.syncTablaVolumeControlState === "function") {
+      window.TablaModule.syncTablaVolumeControlState(accordionList);
+    }
   });
 
   var headerText = document.createElement("div");
